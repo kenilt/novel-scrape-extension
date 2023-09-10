@@ -1,0 +1,18 @@
+{
+    "name": "Novel scrape",
+    "version": "1.0.0",
+    "description": "Read the novel then save to file",
+    "manifest_version": 3,
+    "author": "Kenilt Nguyen",
+    "permissions": [
+        "scripting",
+        "activeTab",
+        "storage",
+        "unlimitedStorage",
+        "history"
+    ],
+    "action":{
+        "default_popup": "index.html",
+        "default_title": "Novel scrape"
+    }
+}
