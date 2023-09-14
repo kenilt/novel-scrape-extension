@@ -11,6 +11,18 @@
         "unlimitedStorage",
         "history"
     ],
+    "host_permissions": [
+       "<all_urls>"
+    ],
+    "content_scripts": [
+       {
+         "matches": ["<all_urls>"],
+         "js": ["script.js"]
+       }
+     ],
+    "background": {
+        "service_worker": "background.js"
+    },
     "action":{
         "default_popup": "index.html",
         "default_title": "Novel scrape"
