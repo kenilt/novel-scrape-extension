@@ -9,7 +9,8 @@
         "activeTab",
         "storage",
         "unlimitedStorage",
-        "history"
+        "history",
+        "downloads"
     ],
     "host_permissions": [
        "<all_urls>"

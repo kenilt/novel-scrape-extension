@@ -28,8 +28,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ });
       break;
     case 'generateDownload':
-      generateDownload(sendResponse);
-      return true; // keep the message connect alive until received the response
+      generateDownload();
+      sendResponse({ });
       break;
   }
 
@@ -63,7 +63,7 @@ async function startScrapeNovel(chapNo) {
     });
   const tab = tabs[0];
 
-  if (!tab.id) {
+  if (!tab || !tab.id) {
     console.log("Can not found active tab");
     return;
   }
@@ -113,24 +113,42 @@ function clearAllStorage() {
   console.log("Cleared all storage");
 }
 
-function generateDownload(sendResponse) {
-  continueGenerateDownloadContent(sendResponse, '', 1);
+async function generateDownload() {
+  let generatedContent = '';
+  for (let i = 1; i <= currentChap; i++) {
+    let chapKey = `chap-${i}`;
+    let chapResult = await chrome.storage.local.get([chapKey]);
+    let chapResultValue = chapResult[chapKey];
+    if (chapResultValue && chapResultValue.length > 0) {
+      generatedContent = generatedContent.concat(chapResultValue.concat('\n\f\n'));
+    }
+  }
+
+  requestDownloadContent(generatedContent);
+  
+  // chrome.runtime.sendMessage({ message: 'downloadContent', content: generatedContent }, response => {
+  //   console.log('Received download OK');
+  // });
 }
 
-function continueGenerateDownloadContent(sendResponse, generatedContent, chapNo) {
-  if (chapNo > currentChap) {
-    console.log('generatedContent', generatedContent);
-    sendResponse({ content: generatedContent });
+
+async function requestDownloadContent(generatedContent) {
+  console.log('requestDownloadContent');
+  const tabs = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+  const tab = tabs[0];
+
+  if (!tab || !tab.id) {
+    console.log("Can not found active tab");
     return;
   }
-  let chapKey = `chap-${chapNo}`;
-  chrome.storage.local.get([chapKey]).then((result) => {
-    let chapContent = result[chapKey];
-    if (chapContent && chapContent.length > 0) {
-      generatedContent = generatedContent.concat(chapContent.concat('\n\f\n'));
-    }
-    continueGenerateDownloadContent(sendResponse, generatedContent, chapNo + 1);
-  });
+
+  chrome.tabs.sendMessage(tab.id, {
+      message: 'downloadContent',
+            content: generatedContent
+        });
 }
 
 // -------------------- Injected functions --------------------

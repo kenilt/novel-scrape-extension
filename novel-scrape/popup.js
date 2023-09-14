@@ -35,14 +35,12 @@ var downloadDataAsText = (function() {
     a.download = fileName;
     a.click();
     window.URL.revokeObjectURL(url);
+    console.log(url);
   };
 }());
 
 function downloadScrapedContent() {
-  chrome.runtime.sendMessage({ message: 'generateDownload' }, response => {
-    console.log('generateDownload reponsed', response);
-    // downloadDataAsText(response.content, 'novel.txt');
-  });
+  chrome.runtime.sendMessage({ message: 'generateDownload' }, response => {});
 }
 
 function requestClearStorage() {
