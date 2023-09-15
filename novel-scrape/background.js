@@ -145,10 +145,20 @@ async function requestDownloadContent(generatedContent) {
     return;
   }
 
-  chrome.tabs.sendMessage(tab.id, {
-      message: 'downloadContent',
-            content: generatedContent
-        });
+  // chrome.tabs.sendMessage(tab.id, {
+  //     message: 'downloadContent',
+  //           content: generatedContent
+  //       });
+
+  chrome.scripting
+    .executeScript({
+      target: {
+        tabId: tab.id
+      },
+      args: [generatedContent],
+      func: injectDownloadNovelAsText,
+    })
+    .then(() => console.log("injected the function injectDownloadNovelAsText"));
 }
 
 // -------------------- Injected functions --------------------
@@ -163,4 +173,25 @@ function doScrapeChapContent(chapNo) {
     // do something with response here, not outside the function
     console.log(response);
   })();
+}
+
+function injectDownloadNovelAsText(novelContent) {
+  var downloadNovelAsText = downloadNovelAsText ?? (function() {
+    var a = document.createElement("a");
+    document.body.appendChild(a);
+    a.style = "display: none";
+    return function(data, fileName) {
+      var blob = new Blob([data], {
+          type: "octet/stream"
+        }),
+        url = window.URL.createObjectURL(blob);
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      console.log(url);
+    };
+  }());
+
+  downloadNovelAsText(novelContent, 'novel.txt');
 }
