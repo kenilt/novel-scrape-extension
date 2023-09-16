@@ -1,11 +1,16 @@
+// background script is the script that keep the instance when the extension was start enable into chrome
+
 var currentChap = 1;
 var nextChapUrl = null;
 var lastChapContent = null;
 
+// read the cached values when the extension was enabled
 readCached();
 
+// Run the logic every time the page was loaded
 chrome.tabs.onUpdated.addListener( function (tabId, changeInfo, tab) {
   if (changeInfo.status == 'complete' && tab.active) {
+    // Only scrape page when has nextChapUrl and the current tap is what we expected.
     if (nextChapUrl && tab.url && tab.url.startsWith(nextChapUrl)) {
       console.log('Continue scrape novel');
 
@@ -15,17 +20,11 @@ chrome.tabs.onUpdated.addListener( function (tabId, changeInfo, tab) {
       setTimeout(() => {
         startScrapeNovel(currentChap);
       }, waitingTime);
-
-      // temp
-      // if (currentChap >= 30) {
-      //   setTimeout(() => {
-      //     setNextChapUrl(null);
-      //   }, 2500);
-      // }
     }
   }
 });
 
+// This function listen on request come from the popup or the content js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.message) {
     case 'currentStatus':
@@ -80,11 +79,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function startScrapeNovel(chapNo) {
   console.log(`background startScrapeNovel ${chapNo}`);
-  // chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-  //   chrome.tabs.sendMessage(tabs[0].id, { message: 'scrapeChapContent', chapNo }, response => {
-  //     console.log('scrapeChapContent done');
-  //   });
-  // });
 
   const tabs = await chrome.tabs.query({
       active: true,
@@ -93,6 +87,7 @@ async function startScrapeNovel(chapNo) {
   const tab = tabs[0];
 
   if (!tab || !tab.id) {
+    setNextChapUrl(null);
     console.log("Can not found active tab");
     return;
   }
@@ -170,10 +165,6 @@ async function generateDownload() {
   }
 
   requestDownloadContent(generatedContent);
-  
-  // chrome.runtime.sendMessage({ message: 'downloadContent', content: generatedContent }, response => {
-  //   console.log('Received download OK');
-  // });
 }
 
 
@@ -190,11 +181,6 @@ async function requestDownloadContent(generatedContent) {
     return;
   }
 
-  // chrome.tabs.sendMessage(tab.id, {
-  //     message: 'downloadContent',
-  //           content: generatedContent
-  //       });
-
   chrome.scripting
     .executeScript({
       target: {
@@ -207,8 +193,10 @@ async function requestDownloadContent(generatedContent) {
 }
 
 // -------------------- Injected functions --------------------
+// These functions was injected to the content of webpages, so they can not interact with the functions was defined above.
+// Keep these function isolated - it can only call methods you set up in content scripts
 
-// Keep this function isolated - it can only call methods you set up in content scripts
+// These logic are only works for the tangthuvien, when switch to another site, edit this function
 function doScrapeChapContent(chapNo) {
   console.log(`call doScrapeChapContent ${chapNo}`);
 
@@ -284,6 +272,7 @@ function doScrapeChapContent(chapNo) {
   }
 }
 
+// The download function can works for any sites
 function injectDownloadNovelAsText(novelContent) {
   var downloadNovelAsText = downloadNovelAsText ?? (function() {
     var a = document.createElement("a");

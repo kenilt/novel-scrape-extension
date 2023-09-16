@@ -1,3 +1,5 @@
+// The popup js is the script the run when click to open the extension popup.
+
 window.onload = function() {
   requestCurrentStatus();
 }
