@@ -5,7 +5,7 @@ readCached();
 
 chrome.tabs.onUpdated.addListener( function (tabId, changeInfo, tab) {
   if (changeInfo.status == 'complete' && tab.active) {
-    if (nextChapUrl && tab.url.startsWith(nextChapUrl)) {
+    if (nextChapUrl && tab.url && tab.url.startsWith(nextChapUrl)) {
       console.log('Continue scrape novel');
       startScrapeNovel(currentChap);
     }
@@ -14,6 +14,9 @@ chrome.tabs.onUpdated.addListener( function (tabId, changeInfo, tab) {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.message) {
+    case 'currentStatus':
+      sendResponse({ currentChap: currentChap, nextChapUrl: nextChapUrl });
+      break;
     case 'scrapeContent':
       startScrapeNovel(currentChap);
       sendResponse({ });
@@ -48,7 +51,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     case 'clearAllStorage':
       clearAllStorage();
-      sendResponse({ });
+      sendResponse({ currentChap: currentChap, nextChapUrl: nextChapUrl });
       break;
     case 'generateDownload':
       generateDownload();
@@ -123,6 +126,7 @@ function setNextChapUrl(chapUrl) {
 
 function clearAllStorage() {
   currentChap = 1;
+  nextChapUrl = null;
   chrome.storage.local.clear(function() {
     var error = chrome.runtime.lastError;
     if (error) {

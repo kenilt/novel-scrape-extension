@@ -9,11 +9,19 @@
     <div class="container mt-3 mb-3" style="width: 450px;">
         <h2 class="text-center">Novel scrape by Kenilt</h2>
 
+        <div class="mt-3">
+          <span class="d-inline-block">Scraped chap:</span>
+          <span id="scraped-chap-count" class="d-inline-block fw-bold">--</span>
+        </div>
+        <div class="mt-0">
+          <span class="d-inline-block">Status:</span>
+          <span id="scraping-status" class="d-inline-block fw-bold">--</span>
+        </div>
+        <div class="mt-0">
+          <span class="d-inline-block">Next URL:</span>
+          <a id="next-chap-url" class="d-inline-block fw-light">--</a>
+        </div>
         <form>
-          <div class="form-group">
-            <label for="input-novel-name">Name of the novel</label>
-            <input type="text" class="form-control" id="input-novel-name" placeholder="Enter novel name" value="Sample novel">
-          </div>
           <button type="submit" class="btn btn-primary mt-3" id="btn-start-scrawl">Start scrape</button>
           <button type="submit" class="btn btn-success mt-3" id="btn-download">Download</button>
           <button type="submit" class="btn btn-danger mt-3" id="btn-clear-all">Clear all</button>

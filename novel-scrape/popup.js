@@ -1,3 +1,7 @@
+window.onload = function() {
+  requestCurrentStatus();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Hook up #check-1 button in popup.html
   document.querySelector('#btn-start-scrawl').addEventListener('click', async () => {
@@ -43,8 +47,23 @@ function downloadScrapedContent() {
   chrome.runtime.sendMessage({ message: 'generateDownload' }, response => {});
 }
 
+function setCurrentStatusFromResponse(response) {
+  console.log(response);
+  document.querySelector('#scraped-chap-count').textContent = response.currentChap;
+  let nextChapUrl = response.nextChapUrl;
+  document.querySelector('#scraping-status').textContent = nextChapUrl ? 'scraping' : 'stopped';
+  document.querySelector('#next-chap-url').textContent = nextChapUrl;
+}
+
+function requestCurrentStatus() {
+  chrome.runtime.sendMessage({ message: 'currentStatus' }, response => {
+    setCurrentStatusFromResponse(response);
+  });
+}
+
 function requestClearStorage() {
   chrome.runtime.sendMessage({ message: 'clearAllStorage' }, response => {
+    setCurrentStatusFromResponse(response);
     console.log('Storage was cleared!');
   });
 }
