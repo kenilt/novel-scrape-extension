@@ -160,7 +160,7 @@ async function generateDownload() {
     let chapResult = await chrome.storage.local.get([chapKey]);
     let chapResultValue = chapResult[chapKey];
     if (chapResultValue && chapResultValue.length > 0) {
-      generatedContent = generatedContent.concat(chapResultValue.concat('\n\f\n'));
+      generatedContent = generatedContent.concat(chapResultValue.concat('\n\f'));
     }
   }
 
@@ -241,7 +241,7 @@ function doScrapeChapContent(chapNo) {
   for(let i = 0; i < boxChapElements.length; i++) {
     chapContent = chapContent.concat(boxChapElements[i].outerText);
     if (i < boxChapElements.length - 1) {
-      chapContent = chapContent.concat('\n\f\n');
+      chapContent = chapContent.concat('\n\f');
     }
   }
 
