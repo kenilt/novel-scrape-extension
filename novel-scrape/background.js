@@ -1,4 +1,5 @@
 var currentChap = 1;
+var nextChapUrl = null;
 
 readCached();
 
@@ -23,6 +24,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       startScrapeNovel(currentChap);
       sendResponse({ });
       break;
+    case 'gotContent': {
+      // handle scrape content
+      let chapContent = request.chapContent;
+      if (chapContent) {
+        let chapKey = 'chap-' + currentChap;
+        chrome.storage.local.set({
+          [chapKey]: chapContent
+        }).then(() => {
+          console.log(`${chapKey} was scraped`);
+        });
+        
+        // next chap url
+        let chapUrl = request.nextChapUrl;
+        setNextChapUrl(chapUrl);
+
+        // reponse
+        sendResponse({ success: true });
+        setTimeout(() => {
+          increaseCurrentChap();
+        }, 500);
+      }
+      break;
+    }
     case 'clearAllStorage':
       clearAllStorage();
       sendResponse({ });
@@ -31,21 +55,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       generateDownload();
       sendResponse({ });
       break;
-  }
-
-  // handle scrape content
-  let chapContent = request.chapContent;
-  if (chapContent) {
-    let chapKey = 'chap-' + currentChap;
-    chrome.storage.local.set({
-      [chapKey]: chapContent
-    }).then(() => {
-      console.log(`${chapKey} was scraped`);
-    });
-    sendResponse({ success: true });
-    setTimeout(() => {
-      increaseCurrentChap();
-    }, 500);
   }
 });
 
@@ -89,6 +98,10 @@ function readCached() {
     }
     console.log('readCached: currentChap = ', currentChap);
   });
+  chrome.storage.local.get(["nextChapUrl"]).then((result) => {
+    nextChapUrl = result.nextChapUrl;
+    console.log('readCached: nextChapUrl = ', nextChapUrl);
+  });
 }
 
 function increaseCurrentChap() {
@@ -97,6 +110,15 @@ function increaseCurrentChap() {
     currentChap: currentChap
   }).then(() => {
     console.log(`currentChap is set to ${currentChap}`);
+  });
+}
+
+function setNextChapUrl(chapUrl) {
+  nextChapUrl = chapUrl;
+  chrome.storage.local.set({
+    nextChapUrl: nextChapUrl
+  }).then(() => {
+    console.log(`nextChapUrl is set to ${nextChapUrl}`);
   });
 }
 
@@ -163,13 +185,54 @@ async function requestDownloadContent(generatedContent) {
 
 // -------------------- Injected functions --------------------
 
+// Keep this function isolated - it can only call methods you set up in content scripts
 function doScrapeChapContent(chapNo) {
   console.log(`call doScrapeChapContent ${chapNo}`);
-  // Keep this function isolated - it can only call methods you set up in content scripts
-  let textContent = document.documentElement.outerText;
+
+  function getTotalChap() {
+    try {
+      var nextOnClickName = document.getElementsByClassName('bot-next_chap')[0].getAttribute('onclick');
+      var totalChap = nextOnClickName.replace('NextChap(\'', '').replace('\');', '');
+      return parseInt(totalChap);
+    }
+    catch(err) {
+      return 0;
+    }
+  }
+
+  // this function was copy from the source site with some modify, if it not work, open the source site then copy the new one
+  function getNextChapUrl(total, numberOfChap) {
+    var current = document.querySelector('.middle-box li.active');
+    var current_id = parseInt(current.getAttribute('title'));
+    total = parseInt(total);
+    var total_tmp = document.querySelector('.middle-box li:last-child').getAttribute('title');
+    total_tmp = parseInt(total_tmp);
+    if (total_tmp > total) {
+      total = total_tmp;
+    }
+    if (current_id < total) {
+      var next_id = current_id + numberOfChap;
+      var url_link = document.querySelector('.link-chap-' + next_id).getAttribute('href');
+      return url_link.trim();
+    } else {
+      return null;
+    }
+  }
+
+  let chapContent = '';
+
+  let boxChapElements = document.getElementsByClassName('box-chap');
+  for(let i = 0; i < boxChapElements.length; i++) {
+    chapContent = chapContent.concat(boxChapElements[i].outerText);
+    if (i < boxChapElements.length - 1) {
+      chapContent = chapContent.concat('\n\f\n');
+    }
+  }
+
+  let nextChapUrl = getNextChapUrl(getTotalChap(), boxChapElements.length);
 
   (async () => {
-    const response = await chrome.runtime.sendMessage({chapContent: textContent});
+    const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
     // do something with response here, not outside the function
     console.log(response);
   })();
