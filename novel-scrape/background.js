@@ -5,16 +5,10 @@ readCached();
 
 chrome.tabs.onUpdated.addListener( function (tabId, changeInfo, tab) {
   if (changeInfo.status == 'complete' && tab.active) {
-    // console.log("background script run");
-    // console.log(`currentChap = ${currentChap}`);
-    // increaseCurrentChap();
-    // setTimeout(() => {
-    //   if (currentChap % 5 == 0) {
-    //     clearAllStorage();
-    //   }
-    // }, 1000);
-
-    // startScrapeNovel(1);
+    if (nextChapUrl && tab.url.startsWith(nextChapUrl)) {
+      console.log('Continue scrape novel');
+      startScrapeNovel(currentChap);
+    }
   }
 });
 
@@ -34,7 +28,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }).then(() => {
           console.log(`${chapKey} was scraped`);
         });
-        
+
         // next chap url
         let chapUrl = request.nextChapUrl;
         setNextChapUrl(chapUrl);
@@ -45,6 +39,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           increaseCurrentChap();
         }, 500);
       }
+      break;
+    }
+    case 'gotContentFailed': {
+      setNextChapUrl(null);
+      sendResponse({ });
       break;
     }
     case 'clearAllStorage':
@@ -229,13 +228,32 @@ function doScrapeChapContent(chapNo) {
     }
   }
 
-  let nextChapUrl = getNextChapUrl(getTotalChap(), boxChapElements.length);
+  if (chapContent.length > 100) {
+    let nextChapUrl = getNextChapUrl(getTotalChap(), boxChapElements.length);
+    (async () => {
+      const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
+      // do something with response here, not outside the function
+      console.log(response);
+    })();
 
-  (async () => {
-    const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
-    // do something with response here, not outside the function
-    console.log(response);
-  })();
+    if (nextChapUrl.length > 10) {
+      // Go to next URL in random time range [3s-10s]
+      let waitingTime = 3000 + Math.floor(Math.random() * 70) * 100;
+      console.log(`Waiting for ${waitingTime}ms before go to next chap`);
+      setTimeout(() => {
+        window.location.href = nextChapUrl;
+      }, waitingTime);
+    } else {
+      alert('Scrape tool: Not found the next chapter URL!');
+    }
+  } else {
+    (async () => {
+      const response = await chrome.runtime.sendMessage({message: 'gotContentFailed', chapContent: chapContent});
+      // do something with response here, not outside the function
+      console.log(response);
+    })();
+    alert('Scrape tool: Can not get the chap content!!!');
+  }
 }
 
 function injectDownloadNovelAsText(novelContent) {
