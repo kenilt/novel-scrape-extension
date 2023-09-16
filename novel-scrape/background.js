@@ -245,7 +245,7 @@ function doScrapeChapContent(chapNo) {
     }
   }
 
-  if (chapContent.length > 100) {
+  if (chapContent && chapContent.length > 100) {
     let nextChapUrl = getNextChapUrl(getTotalChap(), boxChapElements.length);
     (async () => {
       const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
@@ -253,7 +253,7 @@ function doScrapeChapContent(chapNo) {
       console.log(response);
     })();
 
-    if (nextChapUrl.length > 10) {
+    if (nextChapUrl && nextChapUrl.length > 10) {
       // Go to next URL after 500 ms
       let waitingTime = 1000 + Math.floor(Math.random() * 100) * 100;
       setTimeout(() => {
