@@ -1,5 +1,6 @@
 var currentChap = 1;
 var nextChapUrl = null;
+var lastChapContent = null;
 
 readCached();
 
@@ -7,7 +8,20 @@ chrome.tabs.onUpdated.addListener( function (tabId, changeInfo, tab) {
   if (changeInfo.status == 'complete' && tab.active) {
     if (nextChapUrl && tab.url && tab.url.startsWith(nextChapUrl)) {
       console.log('Continue scrape novel');
-      startScrapeNovel(currentChap);
+
+      // start scrape content after a random time [5s-15s], waiting for all stuff loaded, included some chapter list
+      let waitingTime = 5000 + Math.floor(Math.random() * 100) * 100;
+      console.log(`Waiting for ${waitingTime}ms before scrape then go to next chap.`);
+      setTimeout(() => {
+        startScrapeNovel(currentChap);
+      }, waitingTime);
+
+      // temp
+      // if (currentChap >= 30) {
+      //   setTimeout(() => {
+      //     setNextChapUrl(null);
+      //   }, 2500);
+      // }
     }
   }
 });
@@ -25,12 +39,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // handle scrape content
       let chapContent = request.chapContent;
       if (chapContent) {
-        let chapKey = 'chap-' + currentChap;
-        chrome.storage.local.set({
-          [chapKey]: chapContent
-        }).then(() => {
-          console.log(`${chapKey} was scraped`);
-        });
+        // prevent duplicated content
+        if (chapContent != lastChapContent) {
+          let chapKey = 'chap-' + currentChap;
+          chrome.storage.local.set({
+            [chapKey]: chapContent
+          }).then(() => {
+            lastChapContent = chapContent;
+            console.log(`${chapKey} was scraped`);
+          });
+        }
 
         // next chap url
         let chapUrl = request.nextChapUrl;
@@ -127,6 +145,8 @@ function setNextChapUrl(chapUrl) {
 function clearAllStorage() {
   currentChap = 1;
   nextChapUrl = null;
+  lastChapContent = null;
+
   chrome.storage.local.clear(function() {
     var error = chrome.runtime.lastError;
     if (error) {
@@ -205,19 +225,24 @@ function doScrapeChapContent(chapNo) {
 
   // this function was copy from the source site with some modify, if it not work, open the source site then copy the new one
   function getNextChapUrl(total, numberOfChap) {
-    var current = document.querySelector('.middle-box li.active');
-    var current_id = parseInt(current.getAttribute('title'));
-    total = parseInt(total);
-    var total_tmp = document.querySelector('.middle-box li:last-child').getAttribute('title');
-    total_tmp = parseInt(total_tmp);
-    if (total_tmp > total) {
-      total = total_tmp;
+    try {
+      var current = document.querySelector('.middle-box li.active');
+      var current_id = parseInt(current.getAttribute('title'));
+      total = parseInt(total);
+      var total_tmp = document.querySelector('.middle-box li:last-child').getAttribute('title');
+      total_tmp = parseInt(total_tmp);
+      if (total_tmp > total) {
+        total = total_tmp;
+      }
+      if (current_id < total) {
+        var next_id = current_id + numberOfChap;
+        var url_link = document.querySelector('.link-chap-' + next_id).getAttribute('href');
+        return url_link.trim();
+      } else {
+        return null;
+      }
     }
-    if (current_id < total) {
-      var next_id = current_id + numberOfChap;
-      var url_link = document.querySelector('.link-chap-' + next_id).getAttribute('href');
-      return url_link.trim();
-    } else {
+    catch(err) {
       return null;
     }
   }
@@ -241,12 +266,11 @@ function doScrapeChapContent(chapNo) {
     })();
 
     if (nextChapUrl.length > 10) {
-      // Go to next URL in random time range [3s-10s]
-      let waitingTime = 3000 + Math.floor(Math.random() * 70) * 100;
-      console.log(`Waiting for ${waitingTime}ms before go to next chap`);
+      // Go to next URL after 500 ms
+      let waitingTime = 1000 + Math.floor(Math.random() * 100) * 100;
       setTimeout(() => {
         window.location.href = nextChapUrl;
-      }, waitingTime);
+      }, 500);
     } else {
       alert('Scrape tool: Not found the next chapter URL!');
     }
