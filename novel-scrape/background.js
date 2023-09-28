@@ -98,7 +98,7 @@ async function startScrapeNovel(chapNo) {
         tabId: tab.id
       },
       args: [chapNo],
-      func: doScrapeChapContent,
+      func: doScrapeChapContentTYY,
     })
     .then(() => console.log("injected the function doScrapeChapContent"));
 }
@@ -196,8 +196,48 @@ async function requestDownloadContent(generatedContent) {
 // These functions was injected to the content of webpages, so they can not interact with the functions was defined above.
 // Keep these function isolated - it can only call methods you set up in content scripts
 
+// These logic are only works for the truyenyy, when switch to another site, edit this function
+function doScrapeChapContentTYY(chapNo) {
+  console.log(`call doScrapeChapContent ${chapNo}`);
+
+  let chapContent = '';
+
+  // title
+  let chapTitle = document.querySelector('.chap-title>span')?.outerText + ': ' + document.querySelector('.heading-font')?.outerText;
+  chapContent = chapContent.concat(chapTitle).concat('\n\n');
+
+  // content
+  chapContent = chapContent.concat(document.querySelector('.chap-content')?.outerText);
+
+  if (chapContent && chapContent.length > 100) {
+    let nextChapUrl = document.querySelector('.weui-btn.weui-btn_primary')?.href;
+    (async () => {
+      const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
+      // do something with response here, not outside the function
+      console.log(response);
+    })();
+
+    if (nextChapUrl && nextChapUrl.length > 10) {
+      // Go to next URL after 500 ms
+      let waitingTime = 1000 + Math.floor(Math.random() * 100) * 100;
+      setTimeout(() => {
+        window.location.href = nextChapUrl;
+      }, 500);
+    } else {
+      alert('Scrape tool: Not found the next chapter URL!');
+    }
+  } else {
+    (async () => {
+      const response = await chrome.runtime.sendMessage({message: 'gotContentFailed', chapContent: chapContent});
+      // do something with response here, not outside the function
+      console.log(response);
+    })();
+    alert('Scrape tool: Can not get the chap content!!!');
+  }
+}
+
 // These logic are only works for the tangthuvien, when switch to another site, edit this function
-function doScrapeChapContent(chapNo) {
+function doScrapeChapContentTTV(chapNo) {
   console.log(`call doScrapeChapContent ${chapNo}`);
 
   function getTotalChap() {
