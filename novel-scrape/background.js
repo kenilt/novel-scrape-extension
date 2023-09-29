@@ -154,15 +154,16 @@ function clearAllStorage() {
 }
 
 async function generateDownload() {
-  let generatedContent = '';
+  let generatedContent = '<html><body>\n';
   for (let i = 1; i <= currentChap; i++) {
     let chapKey = `chap-${i}`;
     let chapResult = await chrome.storage.local.get([chapKey]);
     let chapResultValue = chapResult[chapKey];
     if (chapResultValue && chapResultValue.length > 0) {
-      generatedContent = generatedContent.concat(chapResultValue.concat('\n\f'));
+      generatedContent = generatedContent.concat(chapResultValue.concat('\n'));
     }
   }
+  generatedContent = generatedContent.concat('</body></html>');
 
   requestDownloadContent(generatedContent);
 }
@@ -200,40 +201,45 @@ async function requestDownloadContent(generatedContent) {
 function doScrapeChapContentTYY(chapNo) {
   console.log(`call doScrapeChapContent ${chapNo}`);
 
+  function postTheContentToBackground(chapContent, nextChapUrl) {
+    if (chapContent && chapContent.length > 100) {
+      let nextChapUrl = document.querySelector('.weui-btn.weui-btn_primary')?.href;
+      (async () => {
+        const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
+        // do something with response here, not outside the function
+        console.log(response);
+      })();
+
+      if (nextChapUrl && nextChapUrl.length > 10) {
+        // Go to next URL after 500 ms
+        let waitingTime = 1000 + Math.floor(Math.random() * 100) * 100;
+        setTimeout(() => {
+          window.location.href = nextChapUrl;
+        }, 500);
+      } else {
+        alert('Scrape tool: Not found the next chapter URL!');
+      }
+    } else {
+      (async () => {
+        const response = await chrome.runtime.sendMessage({message: 'gotContentFailed', chapContent: chapContent});
+        // do something with response here, not outside the function
+        console.log(response);
+      })();
+      alert('Scrape tool: Can not get the chap content!!!');
+    }
+  }
+
   let chapContent = '';
 
   // title
   let chapTitle = document.querySelector('.chap-title>span')?.outerText + ': ' + document.querySelector('.heading-font')?.outerText;
-  chapContent = chapContent.concat(chapTitle).concat('\n\n');
+  chapContent = chapContent.concat('<h2>').concat(chapTitle).concat('</h2>\n');
 
   // content
-  chapContent = chapContent.concat(document.querySelector('.chap-content')?.outerText);
+  chapContent = chapContent.concat('<p>').concat(document.querySelector('.chap-content')?.outerText?.replaceAll('\n\n', '<br/>')).concat('</p>');
+  let nextChapUrl = document.querySelector('.weui-btn.weui-btn_primary')?.href;
 
-  if (chapContent && chapContent.length > 100) {
-    let nextChapUrl = document.querySelector('.weui-btn.weui-btn_primary')?.href;
-    (async () => {
-      const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
-      // do something with response here, not outside the function
-      console.log(response);
-    })();
-
-    if (nextChapUrl && nextChapUrl.length > 10) {
-      // Go to next URL after 500 ms
-      let waitingTime = 1000 + Math.floor(Math.random() * 100) * 100;
-      setTimeout(() => {
-        window.location.href = nextChapUrl;
-      }, 500);
-    } else {
-      alert('Scrape tool: Not found the next chapter URL!');
-    }
-  } else {
-    (async () => {
-      const response = await chrome.runtime.sendMessage({message: 'gotContentFailed', chapContent: chapContent});
-      // do something with response here, not outside the function
-      console.log(response);
-    })();
-    alert('Scrape tool: Can not get the chap content!!!');
-  }
+  postTheContentToBackground(chapContent, nextChapUrl);
 }
 
 // These logic are only works for the tangthuvien, when switch to another site, edit this function
@@ -275,6 +281,34 @@ function doScrapeChapContentTTV(chapNo) {
     }
   }
 
+  function postTheContentToBackground(chapContent, nextChapUrl) {
+    if (chapContent && chapContent.length > 100) {
+      let nextChapUrl = document.querySelector('.weui-btn.weui-btn_primary')?.href;
+      (async () => {
+        const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
+        // do something with response here, not outside the function
+        console.log(response);
+      })();
+
+      if (nextChapUrl && nextChapUrl.length > 10) {
+        // Go to next URL after 500 ms
+        let waitingTime = 1000 + Math.floor(Math.random() * 100) * 100;
+        setTimeout(() => {
+          window.location.href = nextChapUrl;
+        }, 500);
+      } else {
+        alert('Scrape tool: Not found the next chapter URL!');
+      }
+    } else {
+      (async () => {
+        const response = await chrome.runtime.sendMessage({message: 'gotContentFailed', chapContent: chapContent});
+        // do something with response here, not outside the function
+        console.log(response);
+      })();
+      alert('Scrape tool: Can not get the chap content!!!');
+    }
+  }
+
   let chapContent = '';
 
   let boxChapElements = document.getElementsByClassName('box-chap');
@@ -285,31 +319,9 @@ function doScrapeChapContentTTV(chapNo) {
     }
   }
 
-  if (chapContent && chapContent.length > 100) {
-    let nextChapUrl = getNextChapUrl(getTotalChap(), boxChapElements.length);
-    (async () => {
-      const response = await chrome.runtime.sendMessage({message: 'gotContent', chapContent: chapContent, nextChapUrl: nextChapUrl});
-      // do something with response here, not outside the function
-      console.log(response);
-    })();
+  let nextChapUrl = getNextChapUrl(getTotalChap(), boxChapElements.length);
 
-    if (nextChapUrl && nextChapUrl.length > 10) {
-      // Go to next URL after 500 ms
-      let waitingTime = 1000 + Math.floor(Math.random() * 100) * 100;
-      setTimeout(() => {
-        window.location.href = nextChapUrl;
-      }, 500);
-    } else {
-      alert('Scrape tool: Not found the next chapter URL!');
-    }
-  } else {
-    (async () => {
-      const response = await chrome.runtime.sendMessage({message: 'gotContentFailed', chapContent: chapContent});
-      // do something with response here, not outside the function
-      console.log(response);
-    })();
-    alert('Scrape tool: Can not get the chap content!!!');
-  }
+  postTheContentToBackground(chapContent, nextChapUrl);
 }
 
 // The download function can works for any sites
@@ -331,5 +343,5 @@ function injectDownloadNovelAsText(novelContent) {
     };
   }());
 
-  downloadNovelAsText(novelContent, 'novel.txt');
+  downloadNovelAsText(novelContent, 'novel.html');
 }
