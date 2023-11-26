@@ -3,6 +3,7 @@
 var currentChap = 1;
 var nextChapUrl = null;
 var lastChapContent = null;
+var isScraping = false;
 
 // read the cached values when the extension was enabled
 readCached();
@@ -14,11 +15,13 @@ chrome.tabs.onUpdated.addListener( function (tabId, changeInfo, tab) {
     if (nextChapUrl && tab.url && tab.url.startsWith(nextChapUrl)) {
       console.log('Continue scrape novel');
 
-      // start scrape content after a random time [5s-15s], waiting for all stuff loaded, included some chapter list
-      let waitingTime = 5000 + Math.floor(Math.random() * 100) * 100;
+      // start scrape content after a random time [10s-20s], waiting for all stuff loaded, included some chapter list
+      let waitingTime = 10000 + Math.floor(Math.random() * 100) * 100;
       console.log(`Waiting for ${waitingTime}ms before scrape then go to next chap.`);
       setTimeout(() => {
-        startScrapeNovel(currentChap);
+        if (isScraping) {
+          startScrapeNovel(currentChap);
+        }
       }, waitingTime);
     }
   }
@@ -28,11 +31,15 @@ chrome.tabs.onUpdated.addListener( function (tabId, changeInfo, tab) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.message) {
     case 'currentStatus':
-      sendResponse({ currentChap: currentChap, nextChapUrl: nextChapUrl });
+      sendResponse({ currentChap: currentChap, nextChapUrl: nextChapUrl, isScraping: isScraping });
       break;
     case 'scrapeContent':
       startScrapeNovel(currentChap);
       sendResponse({ });
+      break;
+    case 'pauseScraping':
+      pauseScraping();
+      sendResponse({ currentChap: currentChap, nextChapUrl: nextChapUrl, isScraping: isScraping });
       break;
     case 'gotContent': {
       // handle scrape content
@@ -68,7 +75,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     case 'clearAllStorage':
       clearAllStorage();
-      sendResponse({ currentChap: currentChap, nextChapUrl: nextChapUrl });
+      sendResponse({ currentChap: currentChap, nextChapUrl: nextChapUrl, isScraping: isScraping });
       break;
     case 'generateDownload':
       generateDownload();
@@ -79,6 +86,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function startScrapeNovel(chapNo) {
   console.log(`background startScrapeNovel ${chapNo}`);
+  isScraping = true;
 
   const tabs = await chrome.tabs.query({
       active: true,
@@ -101,6 +109,11 @@ async function startScrapeNovel(chapNo) {
       func: doScrapeChapContentTYY,
     })
     .then(() => console.log("injected the function doScrapeChapContent"));
+}
+
+function pauseScraping() {
+  isScraping = false;
+  console.log('Pause scraping requesting...');
 }
 
 function readCached() {
@@ -141,6 +154,7 @@ function clearAllStorage() {
   currentChap = 1;
   nextChapUrl = null;
   lastChapContent = null;
+  isScraping = false;
 
   chrome.storage.local.clear(function() {
     var error = chrome.runtime.lastError;

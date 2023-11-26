@@ -12,8 +12,8 @@ To view the popup js log: Right-click on the extension -> Inspect Popup
 ## To run the extension
 
 Open the novel page, and click on start scrape to start scrape page. But remember to clear all the cache before scraping a new novel.  
-Click on the download button to download the generated `novel.txt` after scraping.  
-To resume the novel scrap after failing, open the chapter we need, and click on start scrape again.  
+Click on the download button to download the generated `novel.html` after scraping.  
+To resume the novel scrap after failing, click on the next chapter URL OR open the chapter we need, and click on resume scrape button.  
 
 ## Format the result in case of txt
 
